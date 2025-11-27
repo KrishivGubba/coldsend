@@ -5,9 +5,13 @@ Run this once to set up your sheet.
 
 import gspread
 from google.oauth2.service_account import Credentials
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configuration
-SHEET_ID = "1qZaIABA_VQv1LWl9GBAoMDT0ii8FTB42b8ETl50DUKQ"
+SHEET_ID = os.getenv("SHEET_ID")
 CREDENTIALS_FILE = "credentials.json"  # Path to your service account JSON
 
 
