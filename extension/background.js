@@ -21,6 +21,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'generateEmail') {
     // Make API call to generate email
     const profileData = message.data;
+    const preferences = message.preferences || {};
     
     fetch(`${API_URL}/generate-email`, {
       method: "POST",
@@ -31,7 +32,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         name: profileData.name,
         headline: profileData.headline,
         about: profileData.about,
-        experiences: profileData.experiences
+        experiences: profileData.experiences,
+        includeResume: preferences.includeResume || false,
+        includeCoffeeChat: preferences.includeCoffeeChat || false
       })
     })
     .then(response => response.json())
@@ -57,6 +60,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const isLinkedIn = sender.tab.url?.includes('linkedin.com');
       sendResponse({ isLinkedIn });
     }
+    return true;
+  }
+  
+  if (message.action === 'sendEmail') {
+    fetch(`${API_URL}/send-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        emailId: message.emailId,
+        emailBody: message.emailBody
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log("Email sent:", data);
+      sendResponse({ success: data.success, message: data.message });
+    })
+    .catch(err => {
+      console.error("Error sending email:", err);
+      sendResponse({ success: false, error: err.message });
+    });
+    
     return true;
   }
   
