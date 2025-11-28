@@ -19,6 +19,48 @@ function waitFor(selector, timeout = 5000) {
 }
 
 /**
+ * Clicks all "See more" buttons within a container (or the whole page)
+ * @param {Element} container - Optional container to search within
+ * @returns {Promise} Resolves after all buttons are clicked and content expands
+ */
+async function expandAllSeeMore(container = document) {
+  let clickedCount = 0;
+  
+  const clickables = container.querySelectorAll('button, a, span[role="button"]');
+  
+  for (const el of clickables) {
+    const text = el.textContent.trim().toLowerCase();
+    
+    // Skip "see less" - already expanded
+    if (text.includes('see less') || text.includes('show less')) {
+      continue;
+    }
+    
+    if (text.includes('see more') || text.includes('show more')) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        // Check if element is still in viewport/attached
+        if (!document.body.contains(el)) continue;
+        
+        try {
+          // Force focus first - helps with LinkedIn's event handlers
+          el.focus();
+          await new Promise(r => setTimeout(r, 50));
+          el.click();
+          clickedCount++;
+          // Longer delay - give LinkedIn time to process
+          await new Promise(r => setTimeout(r, 200));
+        } catch (e) {
+          console.log('Click failed:', e);
+        }
+      }
+    }
+  }
+  
+  return clickedCount;
+}
+
+/**
  * Extracts the About section text from a LinkedIn profile page.
  * Handles both collapsed and expanded states.
  * @returns {string|null} The about text, or null if not found
@@ -293,26 +335,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.action === "getAbout") {
-    waitFor("#about", 3000).then(() => {
-      const aboutText = getAboutSection();
-      console.log("ColdSend: About section:", aboutText);
-      sendResponse({ success: !!aboutText, data: { about: aboutText } });
-    }).catch(err => {
-      console.error("Error in getAbout:", err);
-      sendResponse({ success: false, error: "Could not find About section" });
-    });
-
-    return true;
-  }
-
   if (message.action === "captureProfile") {
     console.log("ColdSend: Capturing profile");
     
-    waitFor("h1").then(h1 => {
+    waitFor("h1").then(async (h1) => {
       if (!h1) {
         sendResponse({ success: false, error: "No profile detected" });
         return;
+      }
+
+      // Expand all "see more" buttons on the page first
+      console.log("ColdSend: Expanding all sections...");
+      
+      // we're running this 10 times just to make sure all sections are expanded, one time isn't enough for some reason
+      for (let i = 0; i < 10; i++) {
+        await expandAllSeeMore();
       }
 
       const name = getText("h1");
@@ -321,6 +358,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const experiences = getExperiences();
 
       console.log("Captured profile:", { name, headline, about, experiences });
+      
+      // Send to background script to generate email
+      chrome.runtime.sendMessage({
+        action: 'generateEmail',
+        data: { name, headline, about, experiences }
+      }, (response) => {
+        if (response?.success) {
+          console.log("Generated email:", response.email);
+        } else {
+          console.error("Email generation failed:", response?.error);
+        }
+      });
 
       sendResponse({ 
         success: true, 
