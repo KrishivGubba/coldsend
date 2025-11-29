@@ -3,11 +3,12 @@ console.log('popup loaded');
 let currentProfileData = null;
 let currentProfileUrl = null;
 
-// Get current preferences from checkboxes
+// Get current preferences from checkboxes and inputs
 function getPreferences() {
   return {
     includeResume: document.getElementById('include-resume').checked,
-    includeCoffeeChat: document.getElementById('include-coffee').checked
+    includeCoffeeChat: document.getElementById('include-coffee').checked,
+    customInstructions: document.getElementById('custom-instructions').value.trim()
   };
 }
 
@@ -198,16 +199,18 @@ function sendEmail() {
   const recipientEmail = document.getElementById('recipient-email').value.trim();
   const emailContent = document.getElementById('email-content').value;
   const emailSubject = document.getElementById('email-subject').value.trim();
+  const scheduleSend = document.getElementById('schedule-send').checked;
   const sendBtn = document.getElementById('send-btn');
   
   if (!recipientEmail) return;
   
   sendBtn.disabled = true;
+  const actionText = scheduleSend ? 'Scheduling...' : 'Sending...';
   sendBtn.innerHTML = `
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinning">
       <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
     </svg>
-    Sending...
+    ${actionText}
   `;
   
   chrome.runtime.sendMessage({
@@ -215,14 +218,16 @@ function sendEmail() {
     emailId: recipientEmail,
     emailBody: emailContent,
     subject: emailSubject,
-    includeResume: getPreferences().includeResume
+    includeResume: getPreferences().includeResume,
+    scheduleSend: scheduleSend
   }, response => {
     if (response?.success) {
+      const successText = scheduleSend ? 'Scheduled!' : 'Sent!';
       sendBtn.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
-        Sent!
+        ${successText}
       `;
       
       setTimeout(() => {

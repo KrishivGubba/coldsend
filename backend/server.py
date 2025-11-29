@@ -5,6 +5,9 @@ from anthropic import Anthropic
 import os
 import json
 import re
+import base64
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,36 +27,123 @@ endpoint = f"https://login.microsoftonline.com/{mic_tenant_id}/oauth2/v2.0/token
 
 
 def get_access_token():
-    # Read stored token file
-    with open("ms_tokens.json", "r") as f:
-        tokens = json.load(f)
+    """Get the current access token from storage."""
+    try:
+        with open("ms_tokens.json", "r") as f:
+            tokens = json.load(f)
+        return tokens.get("access_token")
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
 
-    access_token = tokens.get("access_token")
-    refresh_token = tokens.get("refresh_token")
 
-    # Return token if it exists
-    if access_token:
-        return access_token
+def refresh_access_token():
+    """
+    Refresh the access token using the stored refresh token.
+    Saves new tokens to ms_tokens.json and returns the new access token.
+    """
+    try:
+        with open("ms_tokens.json", "r") as f:
+            tokens = json.load(f)
+        
+        refresh_token = tokens.get("refresh_token")
+        if not refresh_token:
+            print("No refresh token found")
+            return None
 
-    # Refresh if expired or missing
-    refresh_payload = {
-        "client_id": mic_client_id,
-        "client_secret": mic_client_secret,
-        "grant_type": "refresh_token",
-        "refresh_token": refresh_token,
-        "redirect_uri": "http://localhost:3000/auth/callback",
-        "scope": "Mail.Send offline_access openid profile"
-    }
+        refresh_payload = {
+            "client_id": mic_client_id,
+            "client_secret": mic_client_secret,
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "redirect_uri": "http://localhost:3000/auth/callback",
+            "scope": "Mail.Send offline_access openid profile"
+        }
 
-    res = requests.post(endpoint, data=refresh_payload)
-    new_tokens = res.json()
+        res = requests.post(endpoint, data=refresh_payload)
+        new_tokens = res.json()
 
-    # Save updated tokens
-    with open("ms_tokens.json", "w") as f:
-        json.dump(new_tokens, f)
+        if "error" in new_tokens:
+            print(f"Token refresh failed: {new_tokens}")
+            return None
 
-    return new_tokens["access_token"]
+        # Save updated tokens to file
+        with open("ms_tokens.json", "w") as f:
+            json.dump(new_tokens, f)
 
+        print("Access token refreshed successfully")
+        return new_tokens.get("access_token")
+
+    except Exception as e:
+        print(f"Error refreshing token: {e}")
+        return None
+
+
+# Path to your resume file - update this to your actual resume location
+RESUME_PATH = os.getenv("RESUME_PATH", "resume.pdf")
+
+
+def get_next_working_day_9am_cst():
+    """
+    Calculate the next working day (Mon-Fri) at 9:00 AM CST.
+    Returns ISO 8601 formatted datetime string in UTC.
+    """
+    cst = ZoneInfo("America/Chicago")
+    now = datetime.now(cst)
+    
+    # Start with tomorrow
+    next_day = now + timedelta(days=1)
+    
+    # Skip weekends (Saturday=5, Sunday=6)
+    while next_day.weekday() >= 5:
+        next_day += timedelta(days=1)
+    
+    # Set to 9:00 AM CST
+    scheduled_time = next_day.replace(hour=9, minute=0, second=0, microsecond=0)
+    
+    # Convert to UTC for Microsoft Graph API
+    utc_time = scheduled_time.astimezone(ZoneInfo("UTC"))
+    
+    # Return in ISO 8601 format
+    return utc_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def get_resume_attachment():
+    """
+    Read and base64 encode the resume file for email attachment.
+    Returns attachment dict for Microsoft Graph API, or None if file doesn't exist.
+    """
+    if not os.path.exists(RESUME_PATH):
+        print(f"Resume file not found at: {RESUME_PATH}")
+        return None
+    
+    try:
+        with open(RESUME_PATH, "rb") as f:
+            file_content = f.read()
+        
+        # Get filename from path
+        filename = os.path.basename(RESUME_PATH)
+        
+        # Determine content type based on extension
+        ext = filename.lower().split('.')[-1]
+        content_types = {
+            'pdf': 'application/pdf',
+            'doc': 'application/msword',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        }
+        content_type = content_types.get(ext, 'application/octet-stream')
+        
+        # Base64 encode the file
+        encoded_content = base64.b64encode(file_content).decode('utf-8')
+        
+        return {
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            "name": filename,
+            "contentType": content_type,
+            "contentBytes": encoded_content
+        }
+    except Exception as e:
+        print(f"Error reading resume file: {e}")
+        return None
 
 
 def parse_email_response(response_text):
@@ -104,6 +194,7 @@ def generate_email():
     # Get preferences
     include_resume = profile.get('includeResume', False)
     include_coffee_chat = profile.get('includeCoffeeChat', False)
+    custom_instructions = profile.get('customInstructions', '').strip()
     
     # Build dynamic instructions based on preferences
     ask_instructions = []
@@ -115,40 +206,65 @@ def generate_email():
     if not ask_instructions:
         ask_instructions.append("Has a clear, low-pressure ask (advice or quick question)")
     
-    ask_text = "\n".join(f"- {instruction}" for instruction in ask_instructions)
+    ask_instructions_text = "\n".join(f"- {instruction}" for instruction in ask_instructions)
     
-    prompt = f"""You are writing a cold outreach email as Krishiv Gubba, a junior at UW-Madison studying Computer Science and Data Science.
+    # Add custom instructions section if provided
+    custom_instructions_section = ""
+    if custom_instructions:
+        custom_instructions_section = f"""
+    CUSTOM INSTRUCTIONS (IMPORTANT - incorporate these into the email):
+    {custom_instructions}
+    """
 
-RECIPIENT'S LINKEDIN INFO:
-Name: {profile.get('name')}
-Headline: {profile.get('headline')}
-About: {profile.get('about')}
-Experiences: {profile.get('experiences')}
+    prompt = f"""
+    You are writing a cold outreach email as **Krishiv Gubba**, a junior at UW–Madison studying Computer Science and Data Science.
 
-WRITE A SHORT EMAIL (4-6 sentences max) that:
-- Opens with something SPECIFIC from their profile that genuinely caught your attention (a project, company, role, or something from their about section)
-- Briefly mentions you're a CS/DS junior at UW-Madison
-{ask_text}
-- Ends naturally, not with corporate sign-offs
+    You MUST follow this exact structure:
 
-CRITICAL RULES:
-- NO generic openers like "I hope this email finds you well" or "I came across your profile"
-- NO phrases like "I was impressed by" or "Your journey is inspiring" 
-- NO buzzwords like "leverage", "synergy", "ecosystem", "passionate about"
-- NO exclamation points overload
-- Write like you're texting a friend's older sibling who works in tech - respectful but not stiff
-- Be specific. If they worked at Google on ML, mention that. If their about says they love hiking, don't mention it unless relevant.
-- Sound like a real college student, not a LinkedIn influencer
-- Keep it under 100 words
+    1. **Opening line:**  
+    Hi <FIRSTNAME>!
 
-ALSO write a subject line that:
-- Is short (5-8 words max)
-- Is NOT corny or salesy (no "Quick question!" or "Let's connect!")
-- References something specific about them or is straightforwardly direct
-- Sounds like a real person wrote it
+    2. **2–3 sentences:**  
+    A personal hook based on something specific from their LinkedIn (from their About, Experiences, or Headline).  
+    This should feel natural, like "I saw you've been working on X…" or "I noticed you built X at Y…".
 
-OUTPUT FORMAT: Return ONLY valid JSON in this exact format, no other text:
-{{"subject": "your subject line here", "body": "your email body here"}}"""
+    3. **1 sentence:**  
+    A short intro about me: "I'm a CS/DS junior at UW–Madison."
+
+    4. **1–2 sentences (the ask):**  
+    {ask_instructions_text}
+
+    5. **Ending (MUST be exactly this):**
+    Best,
+    Krishiv
+    {custom_instructions_section}
+    OTHER RULES:
+    - KEEP IT UNDER 100 WORDS.
+    - DO NOT use generic openers ("I hope you're doing well", "I came across your profile").
+    - DO NOT use cringe phrases ("inspiring", "passionate about", "leverage", "synergy", etc.).
+    - DO NOT overpraise or sound like a LinkedIn influencer.
+    - MUST sound like a normal college student writing a human email.
+    - Tone: friendly + casual but respectful. Think "texting a friend's older sibling who works in tech."
+
+    RECIPIENT'S LINKEDIN INFO:
+    Name: {profile.get('name')}
+    Headline: {profile.get('headline')}
+    About: {profile.get('about')}
+    Experiences: {profile.get('experiences')}
+
+    SUBJECT LINE RULES:
+    - 5–7 words max.
+    - NOT salesy or corny.
+    - Should reference something from their profile OR be direct and simple.
+
+    OUTPUT FORMAT:
+    Return ONLY valid JSON in this exact shape:
+    {{
+        "subject": "your subject line here",
+        "body": "your email body here"
+    }}
+    """
+
 
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -170,25 +286,99 @@ OUTPUT FORMAT: Return ONLY valid JSON in this exact format, no other text:
     
 
 
+def send_mail_request(access_token, message):
+    """Helper to make the actual Graph API request."""
+    graph_url = "https://graph.microsoft.com/v1.0/me/sendMail"
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+    return requests.post(graph_url, headers=headers, json=message)
+
+
 @app.route('/send-email', methods=['POST'])
 def send_email():
-    data = request.get_json()
-    if not data or 'emailBody' not in data or 'emailId' not in data:
-        return jsonify({"error": "Missing required parameters: emailBody and emailId"}), 400
+    try:
+        data = request.get_json()
 
-    email_body = data['emailBody']
-    email_id = data['emailId']
-    email_subject = data.get('subject', '')  # Subject is optional
-    include_resume = data.get('includeResume', False)
+        if not data or 'emailBody' not in data or 'emailId' not in data:
+            return jsonify({"error": "Missing required parameters: emailBody and emailId"}), 400
 
-    # Stub: logic to actually send the email would go here
-    print(f"Sending email to: {email_id}")
-    print(f"Subject: {email_subject}")
-    print(f"Body:\n{email_body}")
-    print(f"Include Resume: {include_resume}")
+        email_body = data['emailBody']
+        email_id = data['emailId']
+        email_subject = data.get('subject', '')
+        include_resume = data.get('includeResume', False)
+        schedule_send = data.get('scheduleSend', False)
 
-    # Respond with a success stub
-    return jsonify({"success": True, "message": "Email send endpoint stub"}), 200
+        access_token = get_access_token()
+        
+        if not access_token:
+            return jsonify({"error": "No access token found. Please authenticate first."}), 401
+
+        message = {
+            "message": {
+                "subject": email_subject,
+                "body": {
+                    "contentType": "Text",
+                    "content": email_body
+                },
+                "toRecipients": [
+                    {"emailAddress": {"address": email_id}}
+                ]
+            },
+            "saveToSentItems": "true"
+        }
+
+        # Add deferred send time if scheduling (9 AM CST next working day)
+        if schedule_send:
+            deferred_time = get_next_working_day_9am_cst()
+            message["message"]["singleValueExtendedProperties"] = [
+                {
+                    "id": "SystemTime 0x3FEF",  # PidTagDeferredSendTime
+                    "value": deferred_time
+                }
+            ]
+            print(f"Email scheduled for: {deferred_time}")
+
+        # Attach resume if requested
+        if include_resume:
+            attachment = get_resume_attachment()
+            if attachment:
+                message["message"]["attachments"] = [attachment]
+                print(f"Attaching resume: {attachment['name']}")
+            else:
+                print("Warning: includeResume was true but no resume file found")
+
+        # First attempt
+        res = send_mail_request(access_token, message)
+
+        # Check if token expired (401 Unauthorized)
+        if res.status_code == 401:
+            res_json = res.json()
+            error_code = res_json.get("error", {}).get("code", "")
+            
+            if error_code == "InvalidAuthenticationToken" or "expired" in str(res_json).lower():
+                print("Access token expired, refreshing...")
+                
+                # Refresh the token
+                new_token = refresh_access_token()
+                
+                if new_token:
+                    # Retry with new token
+                    res = send_mail_request(new_token, message)
+                else:
+                    return jsonify({"error": "Failed to refresh token. Please re-authenticate."}), 401
+
+        # Check final result
+        if res.status_code == 202:
+            return jsonify({"success": True}), 200
+        else:
+            return jsonify({"error": res.text}), 400
+            
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 
 

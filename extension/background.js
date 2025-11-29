@@ -34,7 +34,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         about: profileData.about,
         experiences: profileData.experiences,
         includeResume: preferences.includeResume || false,
-        includeCoffeeChat: preferences.includeCoffeeChat || false
+        includeCoffeeChat: preferences.includeCoffeeChat || false,
+        customInstructions: preferences.customInstructions || ''
       })
     })
     .then(response => response.json())
@@ -73,7 +74,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         emailId: message.emailId,
         emailBody: message.emailBody,
         subject: message.subject || '',
-        includeResume: message.includeResume
+        includeResume: message.includeResume,
+        scheduleSend: message.scheduleSend || false
       })
     })
     .then(response => response.json())

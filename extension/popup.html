@@ -43,6 +43,9 @@
             <span class="checkmark"></span>
             <span class="label-text">Request coffee chat</span>
           </label>
+          <div class="custom-instructions">
+            <textarea id="custom-instructions" class="custom-instructions-textarea" placeholder="Custom instructions (e.g., mention a specific project, ask about internships, etc.)"></textarea>
+          </div>
         </div>
 
         <button id="capture-btn" class="primary-btn">
@@ -77,6 +80,11 @@
             Regenerate
           </button>
         </div>
+        <label class="checkbox-label schedule-checkbox">
+          <input type="checkbox" id="schedule-send" />
+          <span class="checkmark"></span>
+          <span class="label-text">Schedule for 9 AM CST next working day</span>
+        </label>
         <button id="send-btn" class="send-btn" disabled>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13"/>

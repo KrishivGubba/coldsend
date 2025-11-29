@@ -434,6 +434,47 @@ body {
   font-weight: 500;
 }
 
+/* Custom Instructions */
+.custom-instructions {
+  margin-top: 8px;
+}
+
+.custom-instructions-textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+}
+
+.custom-instructions-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.custom-instructions-textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+/* Schedule Checkbox */
+.schedule-checkbox {
+  margin-bottom: 10px;
+  background: var(--bg-tertiary);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.schedule-checkbox:hover {
+  border-color: var(--success);
+}
+
 .icon-btn {
   width: 36px;
   height: 36px;
