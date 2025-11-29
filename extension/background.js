@@ -40,7 +40,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     .then(response => response.json())
     .then(data => {
       console.log("Email generated:", data);
-      sendResponse({ success: true, email: data.email });
+      sendResponse({ success: true, email: data.email, subject: data.subject });
     })
     .catch(err => {
       console.error("Error generating email:", err);
@@ -71,7 +71,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       },
       body: JSON.stringify({
         emailId: message.emailId,
-        emailBody: message.emailBody
+        emailBody: message.emailBody,
+        subject: message.subject || '',
+        includeResume: message.includeResume
       })
     })
     .then(response => response.json())

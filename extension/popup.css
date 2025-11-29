@@ -297,6 +297,10 @@ body {
   margin-bottom: 10px;
 }
 
+.email-subject-input {
+  margin-bottom: 10px;
+}
+
 .text-input {
   width: 100%;
   padding: 12px 14px;

@@ -19,15 +19,20 @@ function getStorageKey(url) {
 }
 
 // Save email data to storage
-function saveEmailData(email) {
+function saveEmailData(email, subject) {
   if (!currentProfileUrl) return;
   
   const key = getStorageKey(currentProfileUrl);
   if (!key) return;
   
+  // Get current values if not provided
+  const emailValue = email !== undefined ? email : document.getElementById('email-content').value;
+  const subjectValue = subject !== undefined ? subject : document.getElementById('email-subject').value;
+  
   chrome.storage.local.set({
     [key]: {
-      email: email,
+      email: emailValue,
+      subject: subjectValue,
       profileData: currentProfileData,
       timestamp: Date.now()
     }
@@ -85,12 +90,16 @@ function generateEmail() {
       }, emailResponse => {
         resetButton();
         
+        const emailSubject = document.getElementById('email-subject');
+        
         if (emailResponse?.success && emailResponse.email) {
           emailContent.value = emailResponse.email;
+          emailSubject.value = emailResponse.subject || '';
           emailSection.classList.remove('hidden');
-          saveEmailData(emailResponse.email);
+          saveEmailData(emailResponse.email, emailResponse.subject || '');
         } else {
           emailContent.value = "Failed to generate email. Please try again.";
+          emailSubject.value = '';
           emailSection.classList.remove('hidden');
         }
       });
@@ -167,9 +176,12 @@ function regenerateEmail() {
       Regenerate
     `;
     
+    const emailSubject = document.getElementById('email-subject');
+    
     if (response?.success && response.email) {
       emailContent.value = response.email;
-      saveEmailData(response.email);
+      emailSubject.value = response.subject || '';
+      saveEmailData(response.email, response.subject || '');
     }
   });
 }
@@ -185,6 +197,7 @@ function updateSendButtonState() {
 function sendEmail() {
   const recipientEmail = document.getElementById('recipient-email').value.trim();
   const emailContent = document.getElementById('email-content').value;
+  const emailSubject = document.getElementById('email-subject').value.trim();
   const sendBtn = document.getElementById('send-btn');
   
   if (!recipientEmail) return;
@@ -200,7 +213,9 @@ function sendEmail() {
   chrome.runtime.sendMessage({
     action: 'sendEmail',
     emailId: recipientEmail,
-    emailBody: emailContent
+    emailBody: emailContent,
+    subject: emailSubject,
+    includeResume: getPreferences().includeResume
   }, response => {
     if (response?.success) {
       sendBtn.innerHTML = `
@@ -251,9 +266,13 @@ document.getElementById('regenerate-btn').addEventListener('click', regenerateEm
 document.getElementById('send-btn').addEventListener('click', sendEmail);
 document.getElementById('recipient-email').addEventListener('input', updateSendButtonState);
 
-// Save email when user edits the textarea
-document.getElementById('email-content').addEventListener('input', (e) => {
-  saveEmailData(e.target.value);
+// Save email when user edits the textarea or subject
+document.getElementById('email-content').addEventListener('input', () => {
+  saveEmailData();
+});
+
+document.getElementById('email-subject').addEventListener('input', () => {
+  saveEmailData();
 });
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -286,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadEmailData(tab.url, savedData => {
       if (savedData && savedData.email) {
         emailContent.value = savedData.email;
+        document.getElementById('email-subject').value = savedData.subject || '';
         emailSection.classList.remove('hidden');
         currentProfileData = savedData.profileData;
         console.log("Loaded saved email for this profile");
