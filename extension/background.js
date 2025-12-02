@@ -64,6 +64,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   
+  if (message.action === 'generateConnectionMessage') {
+    const profileData = message.data;
+    const preferences = message.preferences || {};
+    
+    fetch(`${API_URL}/generate-connection-message`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name: profileData.name,
+        headline: profileData.headline,
+        about: profileData.about,
+        experiences: profileData.experiences,
+        customInstructions: preferences.customInstructions || ''
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log("Connection message generated:", data);
+      sendResponse({ success: true, message: data.message });
+    })
+    .catch(err => {
+      console.error("Error generating connection message:", err);
+      sendResponse({ success: false, error: err.message });
+    });
+    
+    return true;
+  }
+  
   if (message.action === 'sendEmail') {
     fetch(`${API_URL}/send-email`, {
       method: "POST",

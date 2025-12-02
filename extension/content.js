@@ -124,6 +124,38 @@ function getAboutSection() {
   return null;
 }
 
+function expandConnectModal(firstName, lastName) {
+  const fullName = `${firstName} ${lastName}`;
+
+  // Query all buttons and all divs
+  const buttons = document.querySelectorAll('button');
+  const divs = document.querySelectorAll('div');
+
+  // Filter buttons
+  const filteredButtons = Array.from(buttons).filter(btn => {
+    const ariaLabel = btn.getAttribute('aria-label');
+    return ariaLabel && ariaLabel.toLowerCase() === `invite ${fullName.toLowerCase()} to connect`;
+  });
+
+  // Filter divs
+  const filteredDivs = Array.from(divs).filter(div => {
+    const ariaLabel = div.getAttribute('aria-label');
+    return ariaLabel && ariaLabel.toLowerCase() === `invite ${fullName.toLowerCase()} to connect`;
+  });
+
+  // Combine both arrays and return
+  let allElems = [...filteredButtons, ...filteredDivs];
+
+  allElems[0].click();
+
+  // Wait a second and a half, then click the first "Add a note" button available
+  setTimeout(() => {
+    const addNoteBtn = document.querySelector('button[aria-label="Add a note"]');
+    if (addNoteBtn) addNoteBtn.click();
+  }, 750);
+}
+
+
 /**
  * Extracts all visible experiences from a LinkedIn profile page.
  * @returns {Array} Array of experience objects with title, company, duration, location, description
@@ -332,6 +364,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: false, error: "Extraction failed" });
     });
 
+    return true;
+  }
+
+  if (message.action === "sendConnectionRequest") {
+    const { message: connectionMessage, name } = message;
+    
+    // Parse name into first and last
+    const nameParts = name.split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ');
+    
+    console.log("ColdSend: Opening connection modal for", firstName, lastName);
+    
+    // Open the modal
+    expandConnectModal(firstName, lastName);
+    
+    // Wait for the textarea to appear and populate it
+    setTimeout(() => {
+      // LinkedIn's connection note textarea
+      const textarea = document.querySelector('textarea[name="message"]') || 
+                       document.querySelector('#custom-message') ||
+                       document.querySelector('textarea.connect-button-send-invite__custom-message');
+      
+      if (textarea) {
+        textarea.focus();
+        textarea.value = connectionMessage;
+        // Trigger input event so LinkedIn registers the change
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        console.log("ColdSend: Populated connection message");
+        sendResponse({ success: true });
+      } else {
+        console.error("ColdSend: Could not find connection textarea");
+        sendResponse({ success: false, error: "Textarea not found" });
+      }
+    }, 1500); // Wait for modal animation
+    
     return true;
   }
 

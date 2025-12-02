@@ -264,12 +264,93 @@ function sendEmail() {
   });
 }
 
+// Send connection request
+function sendConnectionRequest() {
+  const connectBtn = document.getElementById('connect-btn');
+  
+  connectBtn.disabled = true;
+  connectBtn.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinning">
+      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+    </svg>
+    Generating...
+  `;
+  
+  chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+    const tab = tabs[0];
+    
+    // First capture profile data if we don't have it
+    if (!currentProfileData) {
+      chrome.tabs.sendMessage(tab.id, { action: "captureProfile" }, response => {
+        if (chrome.runtime.lastError || !response?.success) {
+          console.error("Failed to capture profile");
+          resetConnectButton();
+          return;
+        }
+        currentProfileData = response.data;
+        generateAndSendConnectionRequest(tab.id);
+      });
+    } else {
+      generateAndSendConnectionRequest(tab.id);
+    }
+  });
+}
+
+function generateAndSendConnectionRequest(tabId) {
+  const connectBtn = document.getElementById('connect-btn');
+  
+  // Generate connection message via background script
+  chrome.runtime.sendMessage({
+    action: 'generateConnectionMessage',
+    data: currentProfileData,
+    preferences: getPreferences()
+  }, response => {
+    if (response?.success && response.message) {
+      // Send message to content script to open modal and populate
+      chrome.tabs.sendMessage(tabId, { 
+        action: "sendConnectionRequest",
+        message: response.message,
+        name: currentProfileData.name
+      }, contentResponse => {
+        resetConnectButton();
+        
+        if (contentResponse?.success) {
+          connectBtn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Modal Opened!
+          `;
+          setTimeout(resetConnectButton, 2000);
+        }
+      });
+    } else {
+      resetConnectButton();
+    }
+  });
+}
+
+function resetConnectButton() {
+  const connectBtn = document.getElementById('connect-btn');
+  connectBtn.disabled = false;
+  connectBtn.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="8.5" cy="7" r="4"/>
+      <line x1="20" y1="8" x2="20" y2="14"/>
+      <line x1="23" y1="11" x2="17" y2="11"/>
+    </svg>
+    Send Connection Request
+  `;
+}
+
 // Event listeners
 document.getElementById('capture-btn').addEventListener('click', generateEmail);
 document.getElementById('copy-btn').addEventListener('click', copyEmail);
 document.getElementById('regenerate-btn').addEventListener('click', regenerateEmail);
 document.getElementById('send-btn').addEventListener('click', sendEmail);
 document.getElementById('recipient-email').addEventListener('input', updateSendButtonState);
+document.getElementById('connect-btn').addEventListener('click', sendConnectionRequest);
 
 // Save email when user edits the textarea or subject
 document.getElementById('email-content').addEventListener('input', () => {

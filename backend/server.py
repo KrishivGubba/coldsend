@@ -224,12 +224,12 @@ def generate_email():
     1. **Opening line:**  
     Hi <FIRSTNAME>!
 
-    2. **2–3 sentences:**  
+    2. **1 sentence:**  
+    A short intro about me: "I'm a CS/DS junior at UW–Madison."
+
+    3. **4-5 sentences:**  
     A personal hook based on something specific from their LinkedIn (from their About, Experiences, or Headline).  
     This should feel natural, like "I saw you've been working on X…" or "I noticed you built X at Y…".
-
-    3. **1 sentence:**  
-    A short intro about me: "I'm a CS/DS junior at UW–Madison."
 
     4. **1–2 sentences (the ask):**  
     {ask_instructions_text}
@@ -251,7 +251,7 @@ def generate_email():
     Headline: {profile.get('headline')}
     About: {profile.get('about')}
     Experiences: {profile.get('experiences')}
-
+    
     SUBJECT LINE RULES:
     - 5–7 words max.
     - NOT salesy or corny.
@@ -283,7 +283,58 @@ def generate_email():
     })
     print(output)
     return output
+
+
+@app.route("/generate-connection-message", methods=["POST"])
+def generate_connection_message():
+    profile = request.json
     
+    custom_instructions = profile.get('customInstructions', '').strip()
+    
+    custom_section = ""
+    if custom_instructions:
+        custom_section = f"""
+    CUSTOM INSTRUCTIONS (incorporate these):
+    {custom_instructions}
+    """
+    
+    prompt = f"""
+    You are writing a LinkedIn connection request note as **Krishiv Gubba**, a junior at UW–Madison studying Computer Science and Data Science.
+
+    STRICT RULES:
+    - MUST be under 300 characters (LinkedIn's limit)
+    - 2-3 sentences MAX
+    - Start with "Hi <FIRSTNAME>!" 
+    - Reference ONE specific thing from their profile (role, company, project, etc.)
+    - End with a simple ask or expression of interest
+    - NO generic phrases like "I'd love to connect" or "expanding my network"
+    - Sound like a real college student, not a salesperson
+    - Be casual but respectful
+    {custom_section}
+    RECIPIENT'S LINKEDIN INFO:
+    Name: {profile.get('name')}
+    Headline: {profile.get('headline')}
+    About: {profile.get('about')}
+    Experiences: {profile.get('experiences')}
+
+    OUTPUT:
+    Return ONLY the connection note text. No quotes, no JSON, just the raw message.
+    """
+
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=200,
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    message = response.content[0].text.strip()
+    
+    # Ensure it's under 300 chars
+    if len(message) > 300:
+        message = message[:297] + "..."
+    
+    print(f"Generated connection message ({len(message)} chars): {message}")
+    return jsonify({"message": message})
 
 
 def send_mail_request(access_token, message):
