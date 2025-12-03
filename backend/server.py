@@ -234,9 +234,8 @@ def generate_email():
     4. **1–2 sentences (the ask):**  
     {ask_instructions_text}
 
-    5. **Ending (MUST be exactly this):**
-    Best,
-    Krishiv
+    5. **Ending:**
+    Do NOT include any sign-off (no "Best", "Thanks", name, etc.). The signature will be added automatically.
     {custom_instructions_section}
     OTHER RULES:
     - KEEP IT UNDER 100 WORDS.
@@ -347,6 +346,29 @@ def send_mail_request(access_token, message):
     return requests.post(graph_url, headers=headers, json=message)
 
 
+def format_email_as_html(body_text):
+    """
+    Convert plain text email body to HTML and add signature.
+    """
+    # Convert plain text to HTML (escape special chars and convert newlines)
+    html_body = body_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+    html_body = html_body.replace('\n', '<br>\n')
+    
+    # Add the signature
+    signature = """
+<br><br>
+Best,<br>
+<br>
+<b>Krishiv Gubba</b><br>
+B.S. in Computer Science and Data Science<br>
+University of Wisconsin-Madison<br>
+<a href="mailto:kgubba@wisc.edu">kgubba@wisc.edu</a><br>
+<a href="https://www.linkedin.com/in/krishiv-gubba/">LinkedIn</a> | <a href="https://github.com/KrishivGubba">GitHub</a>
+"""
+    
+    return f"<html><body>{html_body}{signature}</body></html>"
+
+
 @app.route('/send-email', methods=['POST'])
 def send_email():
     try:
@@ -366,12 +388,15 @@ def send_email():
         if not access_token:
             return jsonify({"error": "No access token found. Please authenticate first."}), 401
 
+        # Convert email body to HTML with signature
+        html_body = format_email_as_html(email_body)
+
         message = {
             "message": {
                 "subject": email_subject,
                 "body": {
-                    "contentType": "Text",
-                    "content": email_body
+                    "contentType": "HTML",
+                    "content": html_body
                 },
                 "toRecipients": [
                     {"emailAddress": {"address": email_id}}
