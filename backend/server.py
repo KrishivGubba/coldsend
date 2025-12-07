@@ -17,7 +17,31 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)  # allows Chrome extension to call this backend
 
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY")) #TODO: user input here.
+
+# In-memory storage for user settings
+user_settings = {
+    "apiKey": None,
+    "signatureHtml": None,
+    "resumePath": None
+}
+
+
+@app.route("/save-settings", methods=["POST"])
+def save_settings():
+    """Save user settings to memory."""
+    data = request.get_json()
+    
+    if data.get("apiKey"):
+        user_settings["apiKey"] = data["apiKey"]
+    if data.get("signatureHtml"):
+        user_settings["signatureHtml"] = data["signatureHtml"]
+    if data.get("resumePath"):
+        user_settings["resumePath"] = data["resumePath"]
+    
+    print(f"Settings saved: apiKey={'*' * 10 if user_settings['apiKey'] else 'None'}, signatureHtml={bool(user_settings['signatureHtml'])}, resumePath={user_settings['resumePath']}")
+    
+    return jsonify({"success": True})
 
 mic_client_secret = os.getenv("MICROSOFT_CLIENT_SECRET")
 mic_tenant_id = os.getenv("MICROSOFT_TENANT_ID")
@@ -79,7 +103,7 @@ def refresh_access_token():
 
 
 # Path to your resume file - update this to your actual resume location
-RESUME_PATH = os.getenv("RESUME_PATH", "resume.pdf")
+RESUME_PATH = os.getenv("RESUME_PATH", "resume.pdf") #TODO: user input here.
 
 
 def get_next_working_day_9am_cst():
@@ -189,6 +213,10 @@ def parse_email_response(response_text):
 
 @app.route("/generate-email", methods=["POST"])
 def generate_email():
+    # Check if API key is configured
+    if not user_settings["apiKey"]:
+        return jsonify({"error": "API key not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
+    
     profile = request.json  # LinkedIn data
     
     # Get preferences
@@ -216,6 +244,7 @@ def generate_email():
     {custom_instructions}
     """
 
+    #TODO: lowk just ask the user for their prompt, who cares, and we can have some bumahh default if they don't give one
     prompt = f"""
     You are writing a cold outreach email as **Krishiv Gubba**, a junior at UW–Madison studying Computer Science and Data Science.
 
@@ -286,6 +315,10 @@ def generate_email():
 
 @app.route("/generate-connection-message", methods=["POST"])
 def generate_connection_message():
+    # Check if API key is configured
+    if not user_settings["apiKey"]:
+        return jsonify({"error": "API key not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
+    
     profile = request.json
     
     custom_instructions = profile.get('customInstructions', '').strip()
@@ -297,6 +330,7 @@ def generate_connection_message():
     {custom_instructions}
     """
     
+    #TODO: ask the user for their prompt
     prompt = f"""
     You are writing a LinkedIn connection request note as **Krishiv Gubba**, a junior at UW–Madison studying Computer Science and Data Science.
 
@@ -354,7 +388,7 @@ def format_email_as_html(body_text):
     html_body = body_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
     html_body = html_body.replace('\n', '<br>\n')
     
-    # Add the signature
+    # Add the signature - TODO: user input here.
     signature = """
 <br><br>
 Best,<br>
@@ -377,11 +411,19 @@ def send_email():
         if not data or 'emailBody' not in data or 'emailId' not in data:
             return jsonify({"error": "Missing required parameters: emailBody and emailId"}), 400
 
+        # Check if signature is configured
+        if not user_settings["signatureHtml"]:
+            return jsonify({"error": "Email signature not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
+
         email_body = data['emailBody']
         email_id = data['emailId']
         email_subject = data.get('subject', '')
         include_resume = data.get('includeResume', False)
         schedule_send = data.get('scheduleSend', False)
+        
+        # Check if resume path is configured when trying to attach resume
+        if include_resume and not user_settings["resumePath"]:
+            return jsonify({"error": "Resume path not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
 
         access_token = get_access_token()
         

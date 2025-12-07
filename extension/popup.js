@@ -83,6 +83,7 @@ function generateEmail() {
       currentProfileData = response.data;
       console.log("Profile captured:", currentProfileData);
       
+      console.log("called from generate email in popup")
       // Now generate the email via background script
       chrome.runtime.sendMessage({
         action: 'generateEmail',
@@ -164,6 +165,7 @@ function regenerateEmail() {
     ...
   `;
   
+  console.log("called from regen")
   chrome.runtime.sendMessage({
     action: 'generateEmail',
     data: currentProfileData,

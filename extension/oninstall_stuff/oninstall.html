@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Setup - ColdSend</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f7f9fb;
+      color: #222;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 2rem;
+    }
+    .card {
+      background: white;
+      padding: 2rem 3rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(60,72,110,0.1);
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 600px;
+    }
+    .wave {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+    h1 {
+      margin: 0 0 0.3em 0;
+      letter-spacing: 0.01em;
+      text-align: center;
+    }
+    .subtitle {
+      color: #555;
+      margin: 0 0 1.5em 0;
+      text-align: center;
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+    .label-hint {
+      font-weight: 400;
+      color: #777;
+      font-size: 0.85em;
+    }
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: 'Consolas', 'Monaco', monospace;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      outline: none;
+      border-color: #0077b5;
+    }
+    textarea {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: 'Consolas', 'Monaco', monospace;
+      box-sizing: border-box;
+      resize: vertical;
+      min-height: 180px;
+      transition: border-color 0.2s;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #0077b5;
+    }
+    
+    .save-btn {
+      margin-top: 1rem;
+      background: #0077b5;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.9em 2em;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s;
+      width: 100%;
+    }
+    .save-btn:hover {
+      background: #005987;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="wave">⚙️</div>
+    <h1>ColdSend Setup</h1>
+    <p class="subtitle">Configure your settings to get started (make sure the flask server's running)</p>
+    
+    <div class="form-group">
+      <label>Claude API Key</label>
+      <input type="password" id="apiKey" placeholder="sk-ant-api03-...">
+    </div>
+    
+    <div class="form-group">
+      <label>
+        Email Signature 
+        <span class="label-hint">(HTML)</span>
+      </label>
+      <textarea id="signatureHtml" placeholder="<br><br>
+Best,<br>
+<br>
+<b>Your Name</b><br>
+Your Title / School<br>
+<a href='mailto:you@email.com'>you@email.com</a><br>
+<a href='https://linkedin.com/in/you'>LinkedIn</a> | <a href='https://github.com/you'>GitHub</a>"></textarea>
+    </div>
+    
+    <div class="form-group">
+      <label>
+        Resume Path 
+        <span class="label-hint">(absolute path to PDF)</span>
+      </label>
+      <input type="text" id="resumePath" placeholder="/Users/you/Documents/resume.pdf">
+    </div>
+    
+    <button class="save-btn" id="saveBtn">Save Settings</button>
+  </div>
+  
+  <script src="oninstall.js"></script>
+</body>
+</html>
