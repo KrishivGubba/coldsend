@@ -2,6 +2,15 @@
 
 const API_URL = "http://localhost:3000";
 
+// Helper to open setup page when settings are not configured
+function openSetupPage() {
+
+  console.log("ia ma being called setup page");
+  chrome.tabs.create({
+    url: chrome.runtime.getURL("oninstall_stuff/oninstall.html")
+  });
+}
+
 // Listen for extension installation
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
@@ -12,6 +21,9 @@ chrome.runtime.onInstalled.addListener((details) => {
         autoHighlight: true
       }
     });
+    chrome.tabs.create({
+      url: "oninstall_stuff/oninstall.html"   // or onboarding.html, options.html, etc.
+  });
   }
 });
 
@@ -19,6 +31,7 @@ chrome.runtime.onInstalled.addListener((details) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   if (message.action === 'generateEmail') {
+    console.log("i am here once")
     // Make API call to generate email
     const profileData = message.data;
     const preferences = message.preferences || {};
@@ -40,6 +53,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })
     .then(response => response.json())
     .then(data => {
+      // Check if settings are not configured
+      if (data.code === "SETTINGS_NOT_CONFIGURED") {
+        console.error("Settings not configured:", data.error);
+        console.log("gen email is calling the open setup page");
+        openSetupPage();
+        sendResponse({ success: false, error: data.error, needsSetup: true });
+        return;
+      }
       console.log("Email generated:", data);
       sendResponse({ success: true, email: data.email, subject: data.subject });
     })
@@ -83,6 +104,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })
     .then(response => response.json())
     .then(data => {
+      // Check if settings are not configured
+      if (data.code === "SETTINGS_NOT_CONFIGURED") {
+        console.error("Settings not configured:", data.error);
+        openSetupPage();
+        sendResponse({ success: false, error: data.error, needsSetup: true });
+        return;
+      }
       console.log("Connection message generated:", data);
       sendResponse({ success: true, message: data.message });
     })
@@ -110,6 +138,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })
     .then(response => response.json())
     .then(data => {
+      // Check if settings are not configured
+      if (data.code === "SETTINGS_NOT_CONFIGURED") {
+        console.error("Settings not configured:", data.error);
+        openSetupPage();
+        sendResponse({ success: false, error: data.error, needsSetup: true });
+        return;
+      }
       console.log("Email sent:", data);
       sendResponse({ success: data.success, message: data.message });
     })

@@ -17,7 +17,37 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)  # allows Chrome extension to call this backend
 
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY")) #TODO: user input here.
+
+# In-memory storage for user settings
+user_settings = {
+    "userName": None,
+    "userAbout": None,
+    "apiKey": None,
+    "signatureHtml": None,
+    "resumePath": None
+}
+
+
+@app.route("/save-settings", methods=["POST"])
+def save_settings():
+    """Save user settings to memory."""
+    data = request.get_json()
+    
+    if data.get("userName"):
+        user_settings["userName"] = data["userName"]
+    if data.get("userAbout"):
+        user_settings["userAbout"] = data["userAbout"]
+    if data.get("apiKey"):
+        user_settings["apiKey"] = data["apiKey"]
+    if data.get("signatureHtml"):
+        user_settings["signatureHtml"] = data["signatureHtml"]
+    if data.get("resumePath"):
+        user_settings["resumePath"] = data["resumePath"]
+    
+    print(f"Settings saved: userName={user_settings['userName']}, userAbout={bool(user_settings['userAbout'])}, apiKey={'*' * 10 if user_settings['apiKey'] else 'None'}, signatureHtml={bool(user_settings['signatureHtml'])}, resumePath={user_settings['resumePath']}")
+    
+    return jsonify({"success": True})
 
 mic_client_secret = os.getenv("MICROSOFT_CLIENT_SECRET")
 mic_tenant_id = os.getenv("MICROSOFT_TENANT_ID")
@@ -79,7 +109,7 @@ def refresh_access_token():
 
 
 # Path to your resume file - update this to your actual resume location
-RESUME_PATH = os.getenv("RESUME_PATH", "resume.pdf")
+RESUME_PATH = os.getenv("RESUME_PATH", "resume.pdf") #TODO: user input here.
 
 
 def get_next_working_day_9am_cst():
@@ -189,6 +219,14 @@ def parse_email_response(response_text):
 
 @app.route("/generate-email", methods=["POST"])
 def generate_email():
+    # Check if required settings are configured
+    if not user_settings["apiKey"]:
+        return jsonify({"error": "API key not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
+    if not user_settings["userName"]:
+        return jsonify({"error": "User name not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
+    if not user_settings["userAbout"]:
+        return jsonify({"error": "User about info not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
+    
     profile = request.json  # LinkedIn data
     
     # Get preferences
@@ -217,7 +255,7 @@ def generate_email():
     """
 
     prompt = f"""
-    You are writing a cold outreach email as **Krishiv Gubba**, a junior at UW–Madison studying Computer Science and Data Science.
+    You are writing a cold outreach email as **{user_settings["userName"]}**, {user_settings["userAbout"]}.
 
     You MUST follow this exact structure:
 
@@ -225,7 +263,7 @@ def generate_email():
     Hi <FIRSTNAME>!
 
     2. **1 sentence:**  
-    A short intro about me: "I'm a CS/DS junior at UW–Madison."
+    A short intro about me based on this: "{user_settings["userAbout"]}"
 
     3. **4-5 sentences:**  
     A personal hook based on something specific from their LinkedIn (from their About, Experiences, or Headline).  
@@ -242,7 +280,7 @@ def generate_email():
     - DO NOT use generic openers ("I hope you're doing well", "I came across your profile").
     - DO NOT use cringe phrases ("inspiring", "passionate about", "leverage", "synergy", etc.).
     - DO NOT overpraise or sound like a LinkedIn influencer.
-    - MUST sound like a normal college student writing a human email.
+    - MUST sound like a normal person writing a human email.
     - Tone: friendly + casual but respectful. Think "texting a friend's older sibling who works in tech."
 
     RECIPIENT'S LINKEDIN INFO:
@@ -264,8 +302,9 @@ def generate_email():
     }}
     """
 
-
-    response = client.messages.create(
+    anthropic_client = Anthropic(api_key=user_settings["apiKey"])
+    
+    response = anthropic_client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=450,
         messages=[
@@ -286,6 +325,14 @@ def generate_email():
 
 @app.route("/generate-connection-message", methods=["POST"])
 def generate_connection_message():
+    # Check if required settings are configured
+    if not user_settings["apiKey"]:
+        return jsonify({"error": "API key not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
+    if not user_settings["userName"]:
+        return jsonify({"error": "User name not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
+    if not user_settings["userAbout"]:
+        return jsonify({"error": "User about info not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
+    
     profile = request.json
     
     custom_instructions = profile.get('customInstructions', '').strip()
@@ -298,7 +345,7 @@ def generate_connection_message():
     """
     
     prompt = f"""
-    You are writing a LinkedIn connection request note as **Krishiv Gubba**, a junior at UW–Madison studying Computer Science and Data Science.
+    You are writing a LinkedIn connection request note as **{user_settings["userName"]}**, {user_settings["userAbout"]}.
 
     STRICT RULES:
     - MUST be under 300 characters (LinkedIn's limit)
@@ -307,7 +354,7 @@ def generate_connection_message():
     - Reference ONE specific thing from their profile (role, company, project, etc.)
     - End with a simple ask or expression of interest
     - NO generic phrases like "I'd love to connect" or "expanding my network"
-    - Sound like a real college student, not a salesperson
+    - Sound like a real person, not a salesperson
     - Be casual but respectful
     {custom_section}
     RECIPIENT'S LINKEDIN INFO:
@@ -320,7 +367,8 @@ def generate_connection_message():
     Return ONLY the connection note text. No quotes, no JSON, just the raw message.
     """
 
-    response = client.messages.create(
+    anthropic_client = Anthropic(api_key=user_settings["apiKey"])
+    response = anthropic_client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=200,
         messages=[{"role": "user", "content": prompt}]
@@ -346,7 +394,7 @@ def send_mail_request(access_token, message):
     return requests.post(graph_url, headers=headers, json=message)
 
 
-def format_email_as_html(body_text):
+def format_email_as_html(body_text, signature_html):
     """
     Convert plain text email body to HTML and add signature.
     """
@@ -354,19 +402,8 @@ def format_email_as_html(body_text):
     html_body = body_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
     html_body = html_body.replace('\n', '<br>\n')
     
-    # Add the signature
-    signature = """
-<br><br>
-Best,<br>
-<br>
-<b>Krishiv Gubba</b><br>
-B.S. in Computer Science and Data Science<br>
-University of Wisconsin-Madison<br>
-<a href="mailto:kgubba@wisc.edu">kgubba@wisc.edu</a><br>
-<a href="https://www.linkedin.com/in/krishiv-gubba/">LinkedIn</a> | <a href="https://github.com/KrishivGubba">GitHub</a>
-"""
-    
-    return f"<html><body>{html_body}{signature}</body></html>"
+    # Add spacing between body and signature
+    return f"<html><body>{html_body}<br><br>{signature_html}</body></html>"
 
 
 @app.route('/send-email', methods=['POST'])
@@ -377,11 +414,19 @@ def send_email():
         if not data or 'emailBody' not in data or 'emailId' not in data:
             return jsonify({"error": "Missing required parameters: emailBody and emailId"}), 400
 
+        # Check if signature is configured
+        if not user_settings["signatureHtml"]:
+            return jsonify({"error": "Email signature not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
+
         email_body = data['emailBody']
         email_id = data['emailId']
         email_subject = data.get('subject', '')
         include_resume = data.get('includeResume', False)
         schedule_send = data.get('scheduleSend', False)
+        
+        # Check if resume path is configured when trying to attach resume
+        if include_resume and not user_settings["resumePath"]:
+            return jsonify({"error": "Resume path not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
 
         access_token = get_access_token()
         
@@ -389,7 +434,7 @@ def send_email():
             return jsonify({"error": "No access token found. Please authenticate first."}), 401
 
         # Convert email body to HTML with signature
-        html_body = format_email_as_html(email_body)
+        html_body = format_email_as_html(email_body, user_settings["signatureHtml"])
 
         message = {
             "message": {

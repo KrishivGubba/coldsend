@@ -428,16 +428,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       console.log("Captured profile:", { name, headline, about, experiences });
       
       // Send to background script to generate email
-      chrome.runtime.sendMessage({
-        action: 'generateEmail',
-        data: { name, headline, about, experiences }
-      }, (response) => {
-        if (response?.success) {
-          console.log("Generated email:", response.email);
-        } else {
-          console.error("Email generation failed:", response?.error);
-        }
-      });
+      // chrome.runtime.sendMessage({
+      //   action: 'generateEmail',
+      //   data: { name, headline, about, experiences }
+      // }, (response) => {
+      //   if (response?.success) {
+      //     console.log("Generated email:", response.email);
+      //   } else {
+      //     console.error("Email generation failed:", response?.error);
+      //   }
+      // });
 
       sendResponse({ 
         success: true, 
