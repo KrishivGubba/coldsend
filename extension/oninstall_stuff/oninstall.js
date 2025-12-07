@@ -6,12 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function saveSettings() {
+  const userName = document.getElementById('userName').value.trim();
+  const userAbout = document.getElementById('userAbout').value.trim();
   const apiKey = document.getElementById('apiKey').value.trim();
   const signatureHtml = document.getElementById('signatureHtml').value.trim();
   const resumePath = document.getElementById('resumePath').value.trim();
 
   // Save to chrome storage
   chrome.storage.local.set({
+    userName: userName,
+    userAbout: userAbout,
     apiKey: apiKey,
     signatureHtml: signatureHtml,
     resumePath: resumePath
@@ -24,6 +28,8 @@ function saveSettings() {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
+      userName: userName,
+      userAbout: userAbout,
       apiKey: apiKey,
       signatureHtml: signatureHtml,
       resumePath: resumePath
@@ -51,3 +57,13 @@ function showSuccessMessage() {
     <p class="subtitle">Settings saved successfully.</p>
   `;
 }
+
+
+
+function displaySignaturePreview() {
+  const signatureHtml = document.getElementById('signatureHtml').value.trim();
+  const signaturePreview = document.getElementById('signaturePreview');
+  signaturePreview.innerHTML = signatureHtml;
+}
+
+document.getElementById('signatureHtml').addEventListener('input', displaySignaturePreview);

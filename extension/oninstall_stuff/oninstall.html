@@ -88,6 +88,30 @@
       border-color: #0077b5;
     }
     
+    .preview-box {
+      margin-top: 0.75rem;
+      padding: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fafafa;
+      min-height: 80px;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 0.95rem;
+      color: #333;
+    }
+    .preview-box a {
+      color: #0077b5;
+    }
+    .preview-label {
+      font-size: 0.8rem;
+      color: #777;
+      margin-bottom: 0.3rem;
+    }
+    .preview-placeholder {
+      color: #aaa;
+      font-style: italic;
+    }
+    
     .save-btn {
       margin-top: 1rem;
       background: #0077b5;
@@ -113,6 +137,19 @@
     <p class="subtitle">Configure your settings to get started (make sure the flask server's running)</p>
     
     <div class="form-group">
+      <label>Your Name</label>
+      <input type="text" id="userName" placeholder="John Doe">
+    </div>
+    
+    <div class="form-group">
+      <label>
+        About You 
+        <span class="label-hint">(short blurb for outreach emails)</span>
+      </label>
+      <input type="text" id="userAbout" placeholder="e.g., a junior at UW-Madison studying Computer Science">
+    </div>
+    
+    <div class="form-group">
       <label>Claude API Key</label>
       <input type="password" id="apiKey" placeholder="sk-ant-api03-...">
     </div>
@@ -129,6 +166,10 @@ Best,<br>
 Your Title / School<br>
 <a href='mailto:you@email.com'>you@email.com</a><br>
 <a href='https://linkedin.com/in/you'>LinkedIn</a> | <a href='https://github.com/you'>GitHub</a>"></textarea>
+      <div class="preview-label">Preview</div>
+      <div class="preview-box" id="signaturePreview">
+        <span class="preview-placeholder">Your signature preview will appear here...</span>
+      </div>
     </div>
     
     <div class="form-group">

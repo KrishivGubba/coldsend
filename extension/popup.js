@@ -353,6 +353,9 @@ document.getElementById('regenerate-btn').addEventListener('click', regenerateEm
 document.getElementById('send-btn').addEventListener('click', sendEmail);
 document.getElementById('recipient-email').addEventListener('input', updateSendButtonState);
 document.getElementById('connect-btn').addEventListener('click', sendConnectionRequest);
+document.getElementById('settings-btn').addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('oninstall_stuff/oninstall.html') });
+});
 
 // Save email when user edits the textarea or subject
 document.getElementById('email-content').addEventListener('input', () => {
