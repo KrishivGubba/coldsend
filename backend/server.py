@@ -19,6 +19,9 @@ CORS(app)  # allows Chrome extension to call this backend
 
 client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY")) #TODO: user input here.
 
+# Dev mode - set to True to load settings from dev_settings.json automatically
+DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
+
 # In-memory storage for user settings
 user_settings = {
     "userName": None,
@@ -27,6 +30,25 @@ user_settings = {
     "signatureHtml": None,
     "resumePath": None
 }
+
+
+def load_dev_settings():
+    """Load settings from dev_settings.json if in dev mode."""
+    if not DEV_MODE:
+        return
+    try:
+        with open("backend/dev_settings.json", "r") as f:
+            saved = json.load(f)
+            user_settings.update(saved)
+            print("✅ DEV MODE: Loaded settings from dev_settings.json")
+    except FileNotFoundError:
+        print("⚠️  DEV MODE: dev_settings.json not found - create it with your settings")
+    except json.JSONDecodeError:
+        print("⚠️  DEV MODE: dev_settings.json is invalid JSON")
+
+
+# Load dev settings on startup
+load_dev_settings()
 
 
 @app.route("/save-settings", methods=["POST"])
@@ -303,7 +325,7 @@ def generate_email():
     """
 
     anthropic_client = Anthropic(api_key=user_settings["apiKey"])
-    
+    print("Prompt: ", prompt)
     response = anthropic_client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=450,
@@ -313,13 +335,14 @@ def generate_email():
     )
 
     raw_response = response.content[0].text
+    print("Raw response: ", raw_response)
     parsed = parse_email_response(raw_response)
+    print("Parsed: ", parsed)
 
     output = jsonify({
         "email": parsed["body"],
         "subject": parsed["subject"]
     })
-    print(output)
     return output
 
 

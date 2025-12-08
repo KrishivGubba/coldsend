@@ -1,3 +1,5 @@
 credentials.json
 .env
 ms_tokens.json
+dev_settings.json
+.cursorignore
