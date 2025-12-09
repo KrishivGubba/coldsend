@@ -88,17 +88,28 @@ function generateEmail() {
       chrome.runtime.sendMessage({
         action: 'generateEmail',
         data: currentProfileData,
-        preferences: getPreferences()
+        preferences: getPreferences(),
+        linkedinUrl: currentProfileUrl
       }, emailResponse => {
         resetButton();
         
         const emailSubject = document.getElementById('email-subject');
+        const recipientEmail = document.getElementById('recipient-email');
         
         if (emailResponse?.success && emailResponse.email) {
           emailContent.value = emailResponse.email;
           emailSubject.value = emailResponse.subject || '';
           emailSection.classList.remove('hidden');
           saveEmailData(emailResponse.email, emailResponse.subject || '');
+          
+          // Auto-fill recipient email if Apollo found it
+          if (emailResponse.apolloEmail) {
+            recipientEmail.value = emailResponse.apolloEmail;
+            updateSendButtonState();
+            console.log("Apollo found email:", emailResponse.apolloEmail);
+          } else if (emailResponse.apolloError) {
+            console.log("Apollo error:", emailResponse.apolloError);
+          }
         } else {
           emailContent.value = "Failed to generate email. Please try again.";
           emailSubject.value = '';
@@ -169,7 +180,8 @@ function regenerateEmail() {
   chrome.runtime.sendMessage({
     action: 'generateEmail',
     data: currentProfileData,
-    preferences: getPreferences()
+    preferences: getPreferences(),
+    linkedinUrl: currentProfileUrl
   }, response => {
     regenerateBtn.disabled = false;
     regenerateBtn.innerHTML = `
@@ -180,11 +192,18 @@ function regenerateEmail() {
     `;
     
     const emailSubject = document.getElementById('email-subject');
+    const recipientEmail = document.getElementById('recipient-email');
     
     if (response?.success && response.email) {
       emailContent.value = response.email;
       emailSubject.value = response.subject || '';
       saveEmailData(response.email, response.subject || '');
+      
+      // Auto-fill recipient email if Apollo found it
+      if (response.apolloEmail && !recipientEmail.value) {
+        recipientEmail.value = response.apolloEmail;
+        updateSendButtonState();
+      }
     }
   });
 }
@@ -366,6 +385,8 @@ document.getElementById('email-subject').addEventListener('input', () => {
   saveEmailData();
 });
 
+
+//on being loaded it's pulling the profile headline and name to show on the popup and then it's also checking to see if an email's already been written for this profile
 document.addEventListener('DOMContentLoaded', () => {
   const statusDot = document.getElementById('status-dot');
   const statusText = document.getElementById('status-text');

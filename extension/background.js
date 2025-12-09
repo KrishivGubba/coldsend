@@ -35,8 +35,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Make API call to generate email
     const profileData = message.data;
     const preferences = message.preferences || {};
-    
-    fetch(`${API_URL}/generate-email`, {
+    const linkedinUrl = message.linkedinUrl || '';
+
+    // Run both API calls in parallel
+    const generateEmailPromise = fetch(`${API_URL}/generate-email`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -50,24 +52,48 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         includeCoffeeChat: preferences.includeCoffeeChat || false,
         customInstructions: preferences.customInstructions || ''
       })
-    })
-    .then(response => response.json())
-    .then(data => {
-      // Check if settings are not configured
-      if (data.code === "SETTINGS_NOT_CONFIGURED") {
-        console.error("Settings not configured:", data.error);
-        console.log("gen email is calling the open setup page");
-        openSetupPage();
-        sendResponse({ success: false, error: data.error, needsSetup: true });
-        return;
-      }
-      console.log("Email generated:", data);
-      sendResponse({ success: true, email: data.email, subject: data.subject });
-    })
-    .catch(err => {
-      console.error("Error generating email:", err);
-      sendResponse({ success: false, error: err.message });
-    });
+    }).then(response => response.json());
+
+    // Query Apollo for email (only if linkedinUrl provided)
+    const apolloPromise = linkedinUrl 
+      ? fetch(`${API_URL}/query-apollo`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            linkedinUrl: linkedinUrl
+          })
+        }).then(response => response.json()).catch(err => ({ success: false, error: err.message }))
+      : Promise.resolve({ success: false, error: "No LinkedIn URL provided" });
+
+    // Wait for both to complete
+    Promise.all([generateEmailPromise, apolloPromise])
+      .then(([emailData, apolloData]) => {
+        // Check if settings are not configured
+        if (emailData.code === "SETTINGS_NOT_CONFIGURED") {
+          console.error("Settings not configured:", emailData.error);
+          console.log("gen email is calling the open setup page");
+          openSetupPage();
+          sendResponse({ success: false, error: emailData.error, needsSetup: true });
+          return;
+        }
+        
+        console.log("Email generated:", emailData);
+        console.log("Apollo result:", apolloData);
+        
+        sendResponse({ 
+          success: true, 
+          email: emailData.email, 
+          subject: emailData.subject,
+          apolloEmail: apolloData.success ? apolloData.email : null,
+          apolloError: apolloData.success ? null : apolloData.error
+        });
+      })
+      .catch(err => {
+        console.error("Error generating email:", err);
+        sendResponse({ success: false, error: err.message });
+      });
     
     return true; // Keep channel open for async response
   }

@@ -28,7 +28,8 @@ user_settings = {
     "userAbout": None,
     "apiKey": None,
     "signatureHtml": None,
-    "resumePath": None
+    "resumePath": None,
+    "apolloApiKey": None
 }
 
 
@@ -66,10 +67,62 @@ def save_settings():
         user_settings["signatureHtml"] = data["signatureHtml"]
     if data.get("resumePath"):
         user_settings["resumePath"] = data["resumePath"]
+    if data.get("apolloApiKey"):
+        user_settings["apolloApiKey"] = data["apolloApiKey"]
     
-    print(f"Settings saved: userName={user_settings['userName']}, userAbout={bool(user_settings['userAbout'])}, apiKey={'*' * 10 if user_settings['apiKey'] else 'None'}, signatureHtml={bool(user_settings['signatureHtml'])}, resumePath={user_settings['resumePath']}")
+    print(f"Settings saved: userName={user_settings['userName']}, userAbout={bool(user_settings['userAbout'])}, apiKey={'*' * 10 if user_settings['apiKey'] else 'None'}, signatureHtml={bool(user_settings['signatureHtml'])}, resumePath={user_settings['resumePath']}, apolloApiKey={'*' * 10 if user_settings['apolloApiKey'] else 'None'}")
     
     return jsonify({"success": True})
+
+
+@app.route("/query-apollo", methods=["POST"])
+def query_apollo():
+    """Query Apollo API to get email from LinkedIn URL."""
+    # Check if Apollo API key is configured
+    if not user_settings["apolloApiKey"]:
+        return jsonify({"error": "Apollo API key not configured", "code": "SETTINGS_NOT_CONFIGURED"}), 400
+    
+    data = request.get_json()
+    linkedin_url = data.get("linkedinUrl")
+    
+    if not linkedin_url:
+        return jsonify({"error": "LinkedIn URL is required"}), 400
+    
+    try:
+        url = "https://api.apollo.io/api/v1/people/match"
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-cache",
+            "x-api-key": user_settings["apolloApiKey"]
+        }
+        
+        payload = {
+            "linkedin_url": linkedin_url,
+            "reveal_personal_emails": True
+        }
+        
+        response = requests.post(url, headers=headers, json=payload)
+        result = response.json()
+        
+        if result.get("person"):
+            person = result["person"]
+            return jsonify({
+                "success": True,
+                "email": person.get("email"),
+                "name": person.get("name"),
+                "title": person.get("title"),
+                "company": person.get("organization", {}).get("name") if person.get("organization") else None
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "No match found in Apollo"
+            })
+            
+    except Exception as e:
+        print(f"Error querying Apollo: {e}")
+        return jsonify({"error": str(e)}), 500
 
 mic_client_secret = os.getenv("MICROSOFT_CLIENT_SECRET")
 mic_tenant_id = os.getenv("MICROSOFT_TENANT_ID")
