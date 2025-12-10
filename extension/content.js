@@ -1,5 +1,7 @@
 console.log("ColdSend: content script active");
 
+
+
 function getText(selector) {
   const el = document.querySelector(selector);
   return el ? el.textContent.trim() : null;
@@ -424,8 +426,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const headline = getText(".text-body-medium.break-words");
       const about = getAboutSection();
       const experiences = getExperiences();
+      const profileUrl = window.location.href;
 
-      console.log("Captured profile:", { name, headline, about, experiences });
+      console.log("Captured profile:", { name, headline, about, experiences, profileUrl });
       
       // Send to background script to generate email
       // chrome.runtime.sendMessage({
@@ -441,7 +444,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       sendResponse({ 
         success: true, 
-        data: { name, headline, about, experiences } 
+        data: { name, headline, about, experiences, profileUrl } 
       });
     }).catch(err => {
       console.error("Error in captureProfile:", err);

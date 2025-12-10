@@ -9,6 +9,7 @@ function saveSettings() {
   const userName = document.getElementById('userName').value.trim();
   const userAbout = document.getElementById('userAbout').value.trim();
   const apiKey = document.getElementById('apiKey').value.trim();
+  const apolloApiKey = document.getElementById('apolloApiKey').value.trim();
   const signatureHtml = document.getElementById('signatureHtml').value.trim();
   const resumePath = document.getElementById('resumePath').value.trim();
 
@@ -17,6 +18,7 @@ function saveSettings() {
     userName: userName,
     userAbout: userAbout,
     apiKey: apiKey,
+    apolloApiKey: apolloApiKey,
     signatureHtml: signatureHtml,
     resumePath: resumePath
   });
@@ -31,6 +33,7 @@ function saveSettings() {
       userName: userName,
       userAbout: userAbout,
       apiKey: apiKey,
+      apolloApiKey: apolloApiKey,
       signatureHtml: signatureHtml,
       resumePath: resumePath
     })
