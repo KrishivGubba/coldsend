@@ -73,7 +73,15 @@
         <div class="email-subject-input">
           <input type="text" id="email-subject" class="text-input" placeholder="Subject line..." />
         </div>
-        <textarea id="email-content" class="email-textarea" placeholder="Your personalized email will appear here..."></textarea>
+        <div class="email-toolbar">
+          <button id="bold-btn" class="toolbar-btn" title="Bold (Ctrl+B)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+              <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+              <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+            </svg>
+          </button>
+        </div>
+        <div id="email-content" class="email-textarea" contenteditable="true" data-placeholder="Your personalized email will appear here..."></div>
         <div class="email-actions">
           <button id="copy-btn" class="secondary-btn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

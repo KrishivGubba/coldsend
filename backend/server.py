@@ -470,16 +470,13 @@ def send_mail_request(access_token, message):
     return requests.post(graph_url, headers=headers, json=message)
 
 
-def format_email_as_html(body_text, signature_html):
+def format_email_as_html(body_html, signature_html):
     """
-    Convert plain text email body to HTML and add signature.
+    Wrap HTML email body with signature.
+    Body is already HTML from the frontend (contenteditable div).
     """
-    # Convert plain text to HTML (escape special chars and convert newlines)
-    html_body = body_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-    html_body = html_body.replace('\n', '<br>\n')
-    
     # Add spacing between body and signature
-    return f"<html><body>{html_body}<br><br>{signature_html}</body></html>"
+    return f"<html><body>{body_html}<br><br>{signature_html}</body></html>"
 
 
 @app.route('/send-email', methods=['POST'])

@@ -258,18 +258,55 @@ body {
   font-weight: 600;
 }
 
+/* Email Toolbar */
+.email-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toolbar-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.toolbar-btn:active,
+.toolbar-btn.active {
+  background: var(--accent);
+  color: white;
+}
+
 .email-textarea {
   width: 100%;
   min-height: 180px;
+  max-height: 300px;
   padding: 14px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 0 0 12px 12px;
   color: var(--text-primary);
   font-family: inherit;
   font-size: 13px;
   line-height: 1.6;
-  resize: vertical;
+  overflow-y: auto;
   transition: border-color 0.2s ease;
 }
 
@@ -278,9 +315,18 @@ body {
   border-color: var(--accent);
 }
 
-.email-textarea::placeholder {
+/* Placeholder for contenteditable */
+.email-textarea:empty:before {
+  content: attr(data-placeholder);
   color: var(--text-secondary);
   opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Style bold text inside email */
+.email-textarea b,
+.email-textarea strong {
+  font-weight: 700;
 }
 
 .email-actions {

@@ -3,6 +3,32 @@ console.log('popup loaded');
 let currentProfileData = null;
 let currentProfileUrl = null;
 
+
+// Bold selected text in contenteditable
+function toggleBold() {
+  document.execCommand('bold', false, null);
+  document.getElementById('email-content').focus();
+}
+
+// Convert plain text to HTML (for generated emails)
+function textToHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+}
+
+// Get HTML content from email editor
+function getEmailHtml() {
+  return document.getElementById('email-content').innerHTML;
+}
+
+// Set HTML content in email editor
+function setEmailHtml(html) {
+  document.getElementById('email-content').innerHTML = html;
+}
+
 // Get current preferences from checkboxes and inputs
 function getPreferences() {
   return {
@@ -20,20 +46,22 @@ function getStorageKey(url) {
 }
 
 // Save email data to storage
-function saveEmailData(email, subject) {
+function saveEmailData(email, subject, recipientEmail) {
   if (!currentProfileUrl) return;
   
   const key = getStorageKey(currentProfileUrl);
   if (!key) return;
   
-  // Get current values if not provided
-  const emailValue = email !== undefined ? email : document.getElementById('email-content').value;
+  // Get current values if not provided (use innerHTML for contenteditable)
+  const emailValue = email !== undefined ? email : document.getElementById('email-content').innerHTML;
   const subjectValue = subject !== undefined ? subject : document.getElementById('email-subject').value;
+  const recipientValue = recipientEmail !== undefined ? recipientEmail : document.getElementById('recipient-email').value;
   
   chrome.storage.local.set({
     [key]: {
       email: emailValue,
       subject: subjectValue,
+      recipientEmail: recipientValue,
       profileData: currentProfileData,
       timestamp: Date.now()
     }
@@ -97,11 +125,10 @@ function generateEmail() {
         const recipientEmail = document.getElementById('recipient-email');
         
         if (emailResponse?.success && emailResponse.email) {
-          emailContent.value = emailResponse.email;
+          // Convert plain text response to HTML for contenteditable
+          emailContent.innerHTML = textToHtml(emailResponse.email);
           emailSubject.value = emailResponse.subject || '';
           emailSection.classList.remove('hidden');
-          saveEmailData(emailResponse.email, emailResponse.subject || '');
-          
           // Auto-fill recipient email if Apollo found it
           if (emailResponse.apolloEmail) {
             recipientEmail.value = emailResponse.apolloEmail;
@@ -110,8 +137,11 @@ function generateEmail() {
           } else if (emailResponse.apolloError) {
             console.log("Apollo error:", emailResponse.apolloError);
           }
+          
+          // Save all data including recipient email (save as HTML)
+          saveEmailData(emailContent.innerHTML, emailResponse.subject || '', recipientEmail.value);
         } else {
-          emailContent.value = "Failed to generate email. Please try again.";
+          emailContent.innerHTML = "Failed to generate email. Please try again.";
           emailSubject.value = '';
           emailSection.classList.remove('hidden');
         }
@@ -131,12 +161,13 @@ function resetButton() {
   `;
 }
 
-// Copy email to clipboard
+// Copy email to clipboard (copies plain text version)
 function copyEmail() {
   const emailContent = document.getElementById('email-content');
   const copyBtn = document.getElementById('copy-btn');
   
-  navigator.clipboard.writeText(emailContent.value).then(() => {
+  // Get text content (strips HTML tags) for plain text copy
+  navigator.clipboard.writeText(emailContent.innerText).then(() => {
     copyBtn.classList.add('success');
     copyBtn.innerHTML = `
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -195,15 +226,18 @@ function regenerateEmail() {
     const recipientEmail = document.getElementById('recipient-email');
     
     if (response?.success && response.email) {
-      emailContent.value = response.email;
+      // Convert plain text response to HTML for contenteditable
+      emailContent.innerHTML = textToHtml(response.email);
       emailSubject.value = response.subject || '';
-      saveEmailData(response.email, response.subject || '');
       
       // Auto-fill recipient email if Apollo found it
       if (response.apolloEmail && !recipientEmail.value) {
         recipientEmail.value = response.apolloEmail;
         updateSendButtonState();
       }
+      
+      // Save all data including recipient email (save as HTML)
+      saveEmailData(emailContent.innerHTML, response.subject || '', recipientEmail.value);
     }
   });
 }
@@ -218,7 +252,7 @@ function updateSendButtonState() {
 // Send email
 function sendEmail() {
   const recipientEmail = document.getElementById('recipient-email').value.trim();
-  const emailContent = document.getElementById('email-content').value;
+  const emailContent = document.getElementById('email-content').innerHTML; // Send as HTML
   const emailSubject = document.getElementById('email-subject').value.trim();
   const scheduleSend = document.getElementById('schedule-send').checked;
   const sendBtn = document.getElementById('send-btn');
@@ -375,13 +409,18 @@ document.getElementById('connect-btn').addEventListener('click', sendConnectionR
 document.getElementById('settings-btn').addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('oninstall_stuff/oninstall.html') });
 });
+document.getElementById('bold-btn').addEventListener('click', toggleBold);
 
-// Save email when user edits the textarea or subject
+// Save email when user edits the textarea, subject, or recipient email
 document.getElementById('email-content').addEventListener('input', () => {
   saveEmailData();
 });
 
 document.getElementById('email-subject').addEventListener('input', () => {
+  saveEmailData();
+});
+
+document.getElementById('recipient-email').addEventListener('input', () => {
   saveEmailData();
 });
 
@@ -416,10 +455,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load any saved email for this profile
     loadEmailData(tab.url, savedData => {
       if (savedData && savedData.email) {
-        emailContent.value = savedData.email;
+        emailContent.innerHTML = savedData.email; // Load HTML content
         document.getElementById('email-subject').value = savedData.subject || '';
         emailSection.classList.remove('hidden');
         currentProfileData = savedData.profileData;
+        
+        // Restore recipient email if saved
+        if (savedData.recipientEmail) {
+          document.getElementById('recipient-email').value = savedData.recipientEmail;
+          updateSendButtonState();
+        }
+        
         console.log("Loaded saved email for this profile");
       }
     });
