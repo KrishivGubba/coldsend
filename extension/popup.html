@@ -74,10 +74,58 @@
           <input type="text" id="email-subject" class="text-input" placeholder="Subject line..." />
         </div>
         <div class="email-toolbar">
-          <button id="bold-btn" class="toolbar-btn" title="Bold (Ctrl+B)">
+          <button id="bold-btn" class="toolbar-btn" title="Bold">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
               <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
               <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/>
+            </svg>
+          </button>
+          <button id="italic-btn" class="toolbar-btn" title="Italic">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="4" x2="10" y2="4"/>
+              <line x1="14" y1="20" x2="5" y2="20"/>
+              <line x1="15" y1="4" x2="9" y2="20"/>
+            </svg>
+          </button>
+          <button id="underline-btn" class="toolbar-btn" title="Underline">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"/>
+              <line x1="4" y1="21" x2="20" y2="21"/>
+            </svg>
+          </button>
+          <div class="toolbar-divider"></div>
+          <button id="link-btn" class="toolbar-btn" title="Add Link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+          </button>
+          <button id="unlink-btn" class="toolbar-btn" title="Remove Link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18.84 12.25l1.72-1.71h-.02a5.004 5.004 0 0 0-.12-7.07 5.006 5.006 0 0 0-6.95 0l-1.72 1.71"/>
+              <path d="M5.17 11.75l-1.71 1.71a5.004 5.004 0 0 0 .12 7.07 5.006 5.006 0 0 0 6.95 0l1.71-1.71"/>
+              <line x1="2" y1="2" x2="22" y2="22"/>
+            </svg>
+          </button>
+          <div class="toolbar-divider"></div>
+          <button id="bullet-btn" class="toolbar-btn" title="Bullet List">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="9" y1="6" x2="20" y2="6"/>
+              <line x1="9" y1="12" x2="20" y2="12"/>
+              <line x1="9" y1="18" x2="20" y2="18"/>
+              <circle cx="4" cy="6" r="1.5" fill="currentColor"/>
+              <circle cx="4" cy="12" r="1.5" fill="currentColor"/>
+              <circle cx="4" cy="18" r="1.5" fill="currentColor"/>
+            </svg>
+          </button>
+          <button id="number-btn" class="toolbar-btn" title="Numbered List">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="10" y1="6" x2="21" y2="6"/>
+              <line x1="10" y1="12" x2="21" y2="12"/>
+              <line x1="10" y1="18" x2="21" y2="18"/>
+              <text x="3" y="8" font-size="7" fill="currentColor" stroke="none">1</text>
+              <text x="3" y="14" font-size="7" fill="currentColor" stroke="none">2</text>
+              <text x="3" y="20" font-size="7" fill="currentColor" stroke="none">3</text>
             </svg>
           </button>
         </div>

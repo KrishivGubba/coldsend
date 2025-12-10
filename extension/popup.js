@@ -4,9 +4,42 @@ let currentProfileData = null;
 let currentProfileUrl = null;
 
 
-// Bold selected text in contenteditable
+// Formatting functions for contenteditable
 function toggleBold() {
   document.execCommand('bold', false, null);
+  document.getElementById('email-content').focus();
+}
+
+function toggleItalic() {
+  document.execCommand('italic', false, null);
+  document.getElementById('email-content').focus();
+}
+
+function toggleUnderline() {
+  document.execCommand('underline', false, null);
+  document.getElementById('email-content').focus();
+}
+
+function insertLink() {
+  const url = prompt('Enter URL:', 'https://');
+  if (url && url !== 'https://') {
+    document.execCommand('createLink', false, url);
+  }
+  document.getElementById('email-content').focus();
+}
+
+function removeLink() {
+  document.execCommand('unlink', false, null);
+  document.getElementById('email-content').focus();
+}
+
+function insertBulletList() {
+  document.execCommand('insertUnorderedList', false, null);
+  document.getElementById('email-content').focus();
+}
+
+function insertNumberedList() {
+  document.execCommand('insertOrderedList', false, null);
   document.getElementById('email-content').focus();
 }
 
@@ -409,7 +442,15 @@ document.getElementById('connect-btn').addEventListener('click', sendConnectionR
 document.getElementById('settings-btn').addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('oninstall_stuff/oninstall.html') });
 });
+
+// Toolbar buttons
 document.getElementById('bold-btn').addEventListener('click', toggleBold);
+document.getElementById('italic-btn').addEventListener('click', toggleItalic);
+document.getElementById('underline-btn').addEventListener('click', toggleUnderline);
+document.getElementById('link-btn').addEventListener('click', insertLink);
+document.getElementById('unlink-btn').addEventListener('click', removeLink);
+document.getElementById('bullet-btn').addEventListener('click', insertBulletList);
+document.getElementById('number-btn').addEventListener('click', insertNumberedList);
 
 // Save email when user edits the textarea, subject, or recipient email
 document.getElementById('email-content').addEventListener('input', () => {

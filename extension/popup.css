@@ -294,6 +294,13 @@ body {
   color: white;
 }
 
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
 .email-textarea {
   width: 100%;
   min-height: 180px;
@@ -323,10 +330,34 @@ body {
   pointer-events: none;
 }
 
-/* Style bold text inside email */
+/* Style formatted text inside email */
 .email-textarea b,
 .email-textarea strong {
   font-weight: 700;
+}
+
+.email-textarea i,
+.email-textarea em {
+  font-style: italic;
+}
+
+.email-textarea u {
+  text-decoration: underline;
+}
+
+.email-textarea a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.email-textarea ul,
+.email-textarea ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.email-textarea li {
+  margin: 4px 0;
 }
 
 .email-actions {
